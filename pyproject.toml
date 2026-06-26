@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "TrExo"
+version = "0.1.0"
+description = "Interactive exoplanet transit and light curve simulator"
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+    "numpy",
+    "matplotlib"
+]
+
+[project.urls]
+Homepage = ""
+
+[tool.setuptools]
+packages = ["TrExo"]
+
+[project.scripts]
+exoplanet-sim = "TrExo.TrExo_plot:main"
