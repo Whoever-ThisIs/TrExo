@@ -465,6 +465,6 @@ if MODE == "interactive":
         return planet, lc_line, orbit_line
 
     ani = FuncAnimation(fig, update, frames=len(E), interval=20, blit=False)
-    ani.save("exoplanet_transit.gif", writer="imagemagick", fps=30)
+    #ani.save("exoplanet_transit.gif", writer="imagemagick", fps=30)
     
     plt.show()
