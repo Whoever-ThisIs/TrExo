@@ -115,6 +115,17 @@ MODE = "image"   # Two options: "image" or "interactive"
 # =========================================================================
 
 def get_orbit(E):
+    """Get-orbit
+    Computes the projected position of the planet along its orbit for a given value of the eccentric anomaly E.
+    
+    Args:
+        E (float or array): Eccentric anomaly in radians.
+
+    Returns:
+        x (float or array): Projected x-coordinate of the planet.
+        y (float or array): Projected y-coordinate of the planet.
+    
+    """
     x = a * (np.cos(E) - e)
     y = a * np.sqrt(1 - e**2) * np.sin(E)
     y *= np.cos(inc)
@@ -159,6 +170,18 @@ x_orbit, y_orbit = get_orbit(E)
 # =========================================================================
 
 def overlap_area(star_radius,planet_radius, dist):
+    """ Overlap area
+    Computes the area of overlap between the planetary disk and the stellar disk.
+
+    Args:
+        star_radius (float): Radius of the host star.
+        planet_radius (float): Radius of the planet.
+        dist (float): Projected separation between the centers of the star and the planet.
+
+    Returns:
+        float: The area of overlap between the planetary disk and the stellar disk.
+
+    """
     if dist >= star_radius + planet_radius:
         return 0.0
 
@@ -198,6 +221,18 @@ def overlap_area(star_radius,planet_radius, dist):
 # =========================================================================
 
 def flux_from_geometry(x, y, planet_radius):
+    """ Flux from geometry
+    Computes the observed stellar flux based on the geometric overlap between the planetary disk and the stellar disk.
+
+    Args:
+        x (float): Projected x-coordinate of the planet.
+        y (float): Projected y-coordinate of the planet.
+        planet_radius (float): Radius of the planet.
+
+    Returns:
+        float: The observed stellar flux.
+
+    """
     dist = np.sqrt(x**2 + y**2)
     A_star = np.pi * star_radius**2
     A_overlap = overlap_area(star_radius, planet_radius, dist)
@@ -349,6 +384,12 @@ if MODE == "interactive":
     flux_live = np.ones(len(E))
 
     def reset(event=None):
+        """Reset
+        Resets the animation to the initial state when changing any slider.
+
+        Args:
+            event: The event that triggered the reset (default is None).
+        """
         global frame_idx, flux_live
         frame_idx = 0
         flux_live[:] = 1.0
@@ -360,6 +401,16 @@ if MODE == "interactive":
         s.on_changed(reset)
 
     def get_orbit_live(frame):
+        """Get orbit live
+        Computes the projected position of the planet along its orbit for a given frame index, using the current values of the sliders.
+
+        Args:
+            frame (int): The index of the current frame in the animation.
+
+        Returns:
+            x (float): Projected x-coordinate of the planet.
+            y (float): Projected y-coordinate of the planet.
+        """
         a = s_a.val
         e = s_e.val
         inc = np.radians(s_inc.val)
@@ -373,6 +424,17 @@ if MODE == "interactive":
         return x, y
 
     def update(frame):
+        """Update
+        Updates the position of the planet and the light curve for the current frame in the animation.
+
+        Args:
+            frame (int): The index of the current frame in the animation.
+
+        Returns:
+            planet (Circle): The updated planet patch.
+            lc_line (Line2D): The updated light curve line.
+            orbit_line (Line2D): The updated orbit line.
+        """
         global frame_idx, flux_live
 
         if frame_idx >= len(E):
