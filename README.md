@@ -4,7 +4,7 @@
 <img src="TrExo.png" width="200" title="TrExo logo">
 </p>
 
-Transit orbit project for Code Astro 2026
+Project for Code/Astro 2026: Exoplanet transit simulator.
 
 Current status: First draft of the code.
 
