@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from matplotlib.widgets import Slider
 from matplotlib.patches import Circle
 
 # =========================================================================
@@ -12,7 +14,8 @@ from matplotlib.patches import Circle
 # from the transit depth, but for the purpose of this simulation, 
 # we can just input the planet radius directly.
 # =========================================================================
-# FIRST WE DO THE PLANET RADIUS ESTIMATION (Now we don't, but we can change it back later)
+# FIRST WE DO THE PLANET RADIUS ESTIMATION (Now we don't, but we can change
+#  it back later)
 # We are going to calculate the transit depth
 # using the star_radius, normal_luminosity and 
 # transit luminosity. We have:
@@ -40,7 +43,7 @@ from matplotlib.patches import Circle
 # =========================================================================
 # We can start by selecting the initial parameters for the simulation.
 #
-# We want to plot two panels: the left panel will show the orbit of the 
+# I want to plot two panels: the left panel will show the orbit of the 
 # planet around the star, and the right panel will show the light curve 
 # of the transit.
 # =========================================================================
@@ -76,6 +79,12 @@ from matplotlib.patches import Circle
 #  allow us to see the transit in the light curve. We are not using 
 #  real time units, but we can assume that the transit occurs in a time 
 #  scale of a few days, which is typical for exoplanet transits.
+#
+# We will have two modes: a single image mode, where we plot the orbit 
+# and the light curve for a given set of parameters, and an interactive 
+# mode, where we can change the parameters and see how the orbit and 
+# light curve change in real time. We must select the mode (lines 96 and 
+# 97) we want and comment the other one.
 # =========================================================================
 
 star_radius = 1.0
@@ -84,7 +93,9 @@ e = 0.3
 inc = np.radians(90)
 planet_radius = 0.1
 E = np.linspace(0, 2*np.pi, 400)
-time = np.linspace(-5, 5, len(E))
+time = np.linspace(0, 20, len(E))
+MODE = "image"   # Two options: "image" or "interactive"
+#MODE = "interactive" 
 
 # =========================================================================
 # This function computes the projected position of the planet along its
@@ -117,7 +128,7 @@ def get_orbit(E):
 # x_orbit and y_orbit contain the coordinates of the planet along the
 # complete orbit and will later be used:
 #
-# -To draw the orbital trajectory.
+# -To draw th orbit.
 # -Calculate the projected separation between the planet and star.
 # -Generate the transit light curve.
 #
@@ -138,9 +149,11 @@ x_orbit, y_orbit = get_orbit(E)
 # flux = 1 - (A_overlap / A_star)
 #
 # We have three cases:
-# 1) The areas do not touch and the overlap area is zero.
-# 2) The planet is completely inside the stellar disk, and the overlap area is
-#    the area of the planet.
+# 1) The areas do not touch and the overlap area is zero. If I input a 
+#    small angle of inclination, the planet will not transit the star and 
+#    the flux will remain at 1.0.
+# 2) The planet is completely inside the stellar disk, and the overlap area 
+#    is the area of the planet.
 # 3) The planet partially overlaps the stellar disk, and we need to compute
 #    the area of intersection between two circles.
 # =========================================================================
@@ -191,6 +204,9 @@ def flux_from_geometry(x, y, planet_radius):
 
     return 1.0 - (A_overlap / A_star)
 
+#**************************************************************************
+# THE FOLLOWING LINES ARE FOR PLOTTING THE STATIC FIGURE, NOT THE ANIMATION
+#**************************************************************************
 # =========================================================================
 # We compute the stellar flux corresponding to each point of the orbit.
 # For every position:
@@ -200,69 +216,192 @@ def flux_from_geometry(x, y, planet_radius):
 # we calculate the projected overlap between the planet and the star
 # and convert it into a flux value. The resulting array 'flux' contains 
 # the complete transit light curve.
+###########################################################################
+# IMPORTANT NOTE: 
+###########################################################################
+# Now I have to confess a little trick I used to make the light 
+# curve look more realistic. Since the planet at the second half 
+# of the orbit is movin behind the star, I set the flux to 1.0 for 
+# those points.
+###########################################################################
 #
-# Each element of the flux array represents one photometric measurement
-# of the system at a particular orbital position.
+# We then create a figure containing two subplots:
+# Left panel:
+# -Displays the projected exoplanet transit.
+#   *It shows:
+#       -The host star represented as an orange disk.
+#       -The orbital trajectory represented by a gray curve.
+#       -The planet represented as a gray disk.
+#
+# Right panel:
+# -Displays the corresponding transit light curve.
+#   *We plot the light curve, normalized by the stellar flux.
+#    Flux = 1.0 corresponds to the unobscured star, while values below unity 
+#    indicate that part of the stellar disk is being blocked by the planet.
 # =========================================================================
+
 
 flux = np.array([
     flux_from_geometry(x_orbit[i], y_orbit[i], planet_radius)
     for i in range(len(E))
 ])
 
-# =========================================================================
-# We create a figure containing two subplots arranged side by side.
-# Left panel:
-# -Displays the projected exoplanet transit.
+half = len(time) // 2
+
+flux[half:] = 1.0
+
+if MODE == "image":
+    fig, (ax_orbit, ax_lc) = plt.subplots(1, 2, figsize=(11, 5))
+
+    ax_orbit.set_aspect('equal')
+    ax_orbit.set_xlim(-4.5, 4.5)
+    ax_orbit.set_ylim(-3, 3)
+
+    ax_orbit.set_title("Exoplanet Orbit")
+    ax_orbit.set_xlabel("X")
+    ax_orbit.set_ylabel("Y")
+
+    star = Circle((0, 0), star_radius, color="orange")
+    ax_orbit.add_patch(star)
+
+    ax_orbit.plot(x_orbit, y_orbit, lw=1, alpha=0.6)
+
+    planet = Circle(
+        (x_orbit[-1], y_orbit[-1]),
+        planet_radius,
+        color="gray"
+    )
+    ax_orbit.add_patch(planet)
+
+    ax_lc.set_xlim(time[0], time[-1])
+    ax_lc.set_ylim(0.9, 1.02)
+
+    ax_lc.set_title("Light Curve")
+    ax_lc.set_xlabel("Time (days)")
+    ax_lc.set_ylabel(" Normalized Flux")
+
+    ax_lc.plot(time, flux, lw=2)
+
+    plt.tight_layout()
+    plt.show()
+#**************************************************************************
+# HERE ENDS THE STATIC FIGURE, AND THE ANIMATION STARTS
 #
-# Right panel:
-# -Displays the corresponding transit light curve.
-# =========================================================================
+# We want the animation to show the planet moving along its orbit, 
+# while simultaneously updating the light curve to reflect the changing 
+# flux as the planet transits the star. The animation will be interactive, 
+# allowing us to adjust parameters like semi-major axis, eccentricity, 
+# inclination, and planet radius in real-time.
+#
+# We are going to use slides to adjust the parameters of the orbit and 
+# the planet radius. The animation will update the orbit and light curve 
+# based on the current values of the sliders. The sliders will allow us 
+# to explore how different orbital configurations and planet sizes 
+# affect the transit light curve. 
+#**************************************************************************
 
-fig, (ax_orbit, ax_lc) = plt.subplots(1, 2, figsize=(11, 5))
+if MODE == "interactive":
 
-# =========================================================================
-# We plot:
-# -The host star represented as an orange disk.
-# -The orbital trajectory represented by a gray curve.
-# -The planet represented as a gray disk.
-# =========================================================================
+    fig, (ax_orbit, ax_lc) = plt.subplots(1, 2, figsize=(11, 5))
+    plt.subplots_adjust(bottom=0.28)
 
-ax_orbit.set_aspect('equal')
-ax_orbit.set_xlim(-4.5, 4.5)
-ax_orbit.set_ylim(-3, 3)
+    a_init = 2.0
+    e_init = 0.3
+    inc_init = 90
+    rp_init = 0.1
 
-ax_orbit.set_title("Exoplanet Orbit")
-ax_orbit.set_xlabel("X")
-ax_orbit.set_ylabel("Y")
+    ax_orbit.set_aspect('equal')
+    ax_orbit.set_xlim(-4.5, 4.5)
+    ax_orbit.set_ylim(-3, 3)
 
-star = Circle((0, 0), star_radius, color="orange")
-ax_orbit.add_patch(star)
+    ax_orbit.set_title("Exoplanet Orbit (Interactive)")
+    ax_orbit.set_xlabel("X")
+    ax_orbit.set_ylabel("Y")
 
-ax_orbit.plot(x_orbit, y_orbit, lw=1, alpha=0.6)
+    star = Circle((0, 0), star_radius, color="orange")
+    ax_orbit.add_patch(star)
 
-planet = Circle(
-    (x_orbit[-1], y_orbit[-1]),
-    planet_radius,
-    color="gray"
-)
+    planet = Circle((x_orbit[0], y_orbit[0]), rp_init, color="gray")
+    ax_orbit.add_patch(planet)
 
-ax_orbit.add_patch(planet)
+    orbit_line, = ax_orbit.plot([], [], lw=1, alpha=0.5)
 
-# =========================================================================
-# We plot the light curve, normalized by the stellar flux.
-# Flux = 1.0 corresponds to the unobscured star, while values below unity 
-# indicate that part of the stellar disk is being blocked by the planet.
-# =========================================================================
+    ax_lc.set_xlim(time[0], time[-1])
+    ax_lc.set_ylim(0.9, 1.02)
 
-ax_lc.set_xlim(time[0], time[-1])
-ax_lc.set_ylim(0.9, 1.02)
+    ax_lc.set_title("Light Curve")
+    ax_lc.set_xlabel("Time (days)")
+    ax_lc.set_ylabel("Normalized Flux")
 
-ax_lc.set_title("Transit Light Curve")
-ax_lc.set_xlabel("Time (days)")
-ax_lc.set_ylabel(" Normalized Flux")
+    lc_line, = ax_lc.plot(time, flux, lw=2)
 
-ax_lc.plot(time, flux, lw=2)
+    ax_a   = plt.axes([0.12, 0.18, 0.7, 0.03])
+    ax_e   = plt.axes([0.12, 0.13, 0.7, 0.03])
+    ax_inc = plt.axes([0.12, 0.08, 0.7, 0.03])
+    ax_rp  = plt.axes([0.12, 0.03, 0.7, 0.03])
 
-plt.tight_layout()
-plt.show()
+    s_a   = Slider(ax_a, "Semi-major axis", 2.0, 3.0, valinit=a_init)
+    s_e   = Slider(ax_e, "Eccentricity", 0.0, 0.4, valinit=e_init)
+    s_inc = Slider(ax_inc, "Inclination", 0, 90, valinit=inc_init)
+    s_rp  = Slider(ax_rp, "Planet radius", 0.05, 0.4, valinit=rp_init)
+
+    frame_idx = 0
+    flux_live = np.ones(len(E))
+
+    def reset(event=None):
+        global frame_idx, flux_live
+        frame_idx = 0
+        flux_live[:] = 1.0
+        lc_line.set_data(time, flux_live)
+        orbit_line.set_data([], [])
+        fig.canvas.draw_idle()
+
+    for s in [s_a, s_e, s_inc, s_rp]:
+        s.on_changed(reset)
+
+    def get_orbit_live(frame):
+        a = s_a.val
+        e = s_e.val
+        inc = np.radians(s_inc.val)
+
+        E_ang = E[frame]
+
+        x = a * (np.cos(E_ang) - e)
+        y = a * np.sqrt(1 - e**2) * np.sin(E_ang)
+        y *= np.cos(inc)
+
+        return x, y
+
+    def update(frame):
+        global frame_idx, flux_live
+
+        if frame_idx >= len(E):
+            return planet, lc_line, orbit_line
+
+        x, y = get_orbit_live(frame_idx)
+
+        planet.center = (x, y)
+        planet.set_radius(s_rp.val)
+
+        xs, ys = [], []
+        for i in range(frame_idx + 1):
+            xi, yi = get_orbit_live(i)
+            xs.append(xi)
+            ys.append(yi)
+
+        orbit_line.set_data(xs, ys)
+
+        if frame_idx < len(E) // 2:
+            flux_live[frame_idx] = flux_from_geometry(x, y, s_rp.val)
+        else:
+            flux_live[frame_idx] = 1.0
+
+        lc_line.set_data(time, flux_live)
+
+        frame_idx += 1
+
+        return planet, lc_line, orbit_line
+
+    ani = FuncAnimation(fig, update, frames=len(E), interval=20, blit=False)
+
+    plt.show()
