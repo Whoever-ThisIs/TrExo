@@ -1,4 +1,9 @@
 # TrExo
+
+<p align="center">
+<img src="TrExo.png" width="200" title="TrExo logo">
+</p>
+
 Transit orbit project for Code Astro 2026
 
 Current status: First draft of the code: you guys can try and run it on your laptop but it is not finalised as it needs the final plot part!
